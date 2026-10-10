@@ -34,6 +34,7 @@ img { max-width: 100%; }
   --stage-muted: #765F4D;
   --stage-line: rgba(58, 36, 22, 0.18);
   --stage-tint: rgba(58, 36, 22, 0.05);
+  --panel: #F4F3F1;
   --brass: #8C4F18;
   --good: #1F6B45;
   --bad: #A3352B;
@@ -149,7 +150,8 @@ button { font: inherit; color: inherit; }
   line-height: 1;
   color: var(--stage-muted);
 }
-.row-num.is-file { font-family: var(--font-body); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; }
+.row-num.is-file { align-self: center; }
+.row-mail { display: block; width: 18px; height: 18px; }
 .row.is-done .row-num, .row.is-open .row-num { color: var(--brass); }
 .row-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .row-title {
@@ -162,15 +164,18 @@ button { font: inherit; color: inherit; }
 .row-state { font-size: 0.8125rem; color: var(--stage-muted); }
 .row[aria-current="step"] .row-state { color: var(--brass); }
 .row.is-fresh .row-title { animation: unveil .8s cubic-bezier(.2, .7, .2, 1) both; }
-/* Sealed headline: bars standing in for text that has not been unlocked yet */
-.seal { display: flex; flex-direction: column; gap: 6px; padding-block: 5px 3px; }
-.seal i { display: block; height: 9px; border-radius: 2px; background: rgba(58, 36, 22, 0.13); }
-.row.is-open .seal i {
-  background: linear-gradient(90deg, rgba(58, 36, 22, 0.16) 0%, rgba(140, 79, 24, 0.5) 50%, rgba(58, 36, 22, 0.16) 100%);
-  background-size: 220% 100%;
-  animation: shimmer 2.8s linear infinite;
-}
-@keyframes shimmer { from { background-position: 110% 0; } to { background-position: -110% 0; } }
+/* The rail is an outlined progress panel, set apart from the open question area.
+   Locked rows say so in words and with a padlock, so nothing here reads as loading. */
+.tq-rail { background: var(--stage); border: 1px solid var(--paper-line); border-radius: 10px; padding: 20px 22px 6px; }
+.rail-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; padding-bottom: 14px; }
+.rail-head .rail-title { padding-bottom: 0; color: var(--stage-ink); }
+.rail-count { font-size: 0.8125rem; color: var(--stage-muted); font-variant-numeric: tabular-nums; }
+.tq-rail li:last-child { border-bottom: 0; }
+.tq-rail .row { grid-template-columns: 2.5rem minmax(0, 1fr) auto; padding-inline: 10px; margin-inline: -10px; width: calc(100% + 20px); border-radius: 6px; }
+.tq-rail .row[aria-current="step"] { background: var(--panel); }
+.row-lock { width: 14px; height: 14px; align-self: center; color: var(--stage-muted); }
+.row-title.is-locked { font-family: var(--font-body); font-size: 1rem; font-weight: 500; line-height: 1.3; color: var(--stage-muted); }
+.row.is-open .row-title.is-locked { color: var(--stage-ink); }
 @keyframes unveil { from { clip-path: inset(0 100% 0 0); opacity: .2; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
 
 /* ---------- Question ---------- */
@@ -505,7 +510,10 @@ button { font: inherit; color: inherit; }
       </header>
       <div class="tq-main" id="tq-card"></div>
       <nav class="tq-rail" aria-label="Takeaways">
-        <p class="rail-title">Contents</p>
+        <div class="rail-head">
+          <p class="rail-title">Your takeaways</p>
+          <p class="rail-count" id="tq-count"></p>
+        </div>
         <ol id="tq-list"></ol>
       </nav>
     </div>
@@ -582,13 +590,15 @@ button { font: inherit; color: inherit; }
     },
     gate: {
       heading: "Get the executive summary",
-      intro: "You have unlocked all five takeaways. Add your details to download the summary as a PDF.",
-      submitLabel: "Unlock the summary",
+      intro: "You have unlocked all five takeaways. Add your details and we will email you a link to the summary.",
+      submitLabel: "Email me the summary",
       optIn: "Email me future market insights. I can unsubscribe at any time.",
       privacy: "We use your details to provide this summary, as set out in our privacy notice.",
-      thanks: "Your executive summary is ready.",
-      downloadLabel: "Download the PDF",
-      fileUrl: ""
+      thanks: "Check your inbox.",
+      /* {email} is replaced with the address the visitor entered. */
+      sentText: "We have sent a link to the executive summary to {email}. It can take a few minutes to arrive. If you can’t see it, check your spam folder.",
+      resendLabel: "Send it again",
+      changeLabel: "Use a different email"
     },
     disclaimer: "This quiz is for general information only and is not investment advice. Diversification does not guarantee a profit or protect against loss."
   };
@@ -615,6 +625,18 @@ button { font: inherit; color: inherit; }
     var n = document.createElementNS(SVGNS, tag);
     for (var k in attrs) n.setAttribute(k, attrs[k]);
     return n;
+  }
+  function lockIcon() {
+    var s = svgEl("svg", { viewBox: "0 0 16 16", "class": "row-lock", "aria-hidden": "true", focusable: "false" });
+    s.appendChild(svgEl("rect", { x: 3, y: 7, width: 10, height: 7, rx: 1.5, fill: "currentColor" }));
+    s.appendChild(svgEl("path", { d: "M5.5 7V5a2.5 2.5 0 0 1 5 0v2", fill: "none", stroke: "currentColor", "stroke-width": 1.5 }));
+    return s;
+  }
+  function mailIcon() {
+    var s = svgEl("svg", { viewBox: "0 0 18 18", "class": "row-mail", "aria-hidden": "true", focusable: "false" });
+    s.appendChild(svgEl("rect", { x: 1.5, y: 3.5, width: 15, height: 11, rx: 1.5, fill: "none", stroke: "currentColor", "stroke-width": 1.5 }));
+    s.appendChild(svgEl("path", { d: "M2 5l7 5 7-5", fill: "none", stroke: "currentColor", "stroke-width": 1.5 }));
+    return s;
   }
   function button(cls, label, arrow) {
     var b = el("button", "btn " + cls);
@@ -685,19 +707,13 @@ button { font: inherit; color: inherit; }
       if (done) {
         body.appendChild(el("span", "row-title", q.takeaway));
       } else {
-        var seal = el("span", "seal");
-        seal.setAttribute("aria-hidden", "true");
-        var a = el("i"); a.style.width = (62 + (i * 13) % 30) + "%";
-        var c = el("i"); c.style.width = (28 + (i * 17) % 26) + "%";
-        seal.appendChild(a);
-        seal.appendChild(c);
-        body.appendChild(seal);
-        body.appendChild(el("span", "vh", "Takeaway " + (i + 1) + ", locked"));
+        body.appendChild(el("span", "row-title is-locked", "Takeaway " + (i + 1)));
       }
       body.appendChild(el("span", "row-state",
         done ? (pick === q.correct ? "Unlocked. You got it right." : "Unlocked. You missed this one.")
              : i === open ? "Answer question " + (i + 1) + " to unlock" : "Locked"));
       b.appendChild(body);
+      if (!done) b.appendChild(lockIcon());
       b.addEventListener("click", function () { go(i, "question", "question"); });
       li.appendChild(b);
       list.appendChild(li);
@@ -710,16 +726,20 @@ button { font: inherit; color: inherit; }
     r.type = "button";
     r.disabled = !allDone;
     if (state.view === "result") r.setAttribute("aria-current", "step");
-    var tag = el("span", "row-num is-file", "PDF");
+    var tag = el("span", "row-num is-file");
     tag.setAttribute("aria-hidden", "true");
+    tag.appendChild(mailIcon());
     r.appendChild(tag);
     var rb = el("span", "row-body");
     rb.appendChild(el("span", "row-title", "Executive summary"));
     rb.appendChild(el("span", "row-state",
       !allDone ? "Answer all " + total + " to unlock"
-               : state.lead ? "Unlocked. Ready to download."
-               : "You got " + score() + " of " + total + ". Add your details to download."));
+               : state.lead ? "Sent. Check your inbox."
+               : "You got " + score() + " of " + total + ". Add your details and we will email it."));
     r.appendChild(rb);
+    if (!state.lead) r.appendChild(lockIcon());
+    document.getElementById("tq-count").textContent =
+      state.picks.filter(function (p) { return p !== null; }).length + " of " + total + " unlocked";
     r.addEventListener("click", function () { go(state.current, "result", "question"); });
     li.appendChild(r);
     list.appendChild(li);
@@ -928,7 +948,7 @@ button { font: inherit; color: inherit; }
     cover.appendChild(el("span", "cover-eyebrow", CONFIG.eyebrow));
     cover.appendChild(el("span", "cover-title", "Executive Summary"));
     cover.appendChild(el("span", "cover-rule"));
-    cover.appendChild(el("span", "cover-tag", open ? "PDF · Ready" : "PDF · Locked"));
+    cover.appendChild(el("span", "cover-tag", open ? "Sent" : "Locked"));
     return cover;
   }
 
@@ -940,25 +960,29 @@ button { font: inherit; color: inherit; }
     panel.appendChild(body);
 
     if (state.lead) {
-      body.appendChild(el("p", "paper-label", "Unlocked"));
+      /* Last step: the summary is delivered by email, so the screen only confirms and offers a resend. */
+      body.appendChild(el("p", "paper-label", "Sent"));
       var done = el("h3", null, "Thanks, " + state.lead.first + ". " + g.thanks);
       done.id = "tq-gate-title";
       done.tabIndex = -1;
       body.appendChild(done);
+      body.appendChild(el("p", "reveal-text", g.sentText.replace("{email}", state.lead.email)));
       var row = el("div", "actions");
-      var dl = el("a", "btn btn-ink");
-      dl.appendChild(el("span", null, g.downloadLabel));
-      var arrow = el("span", "arrow", "↓");
-      arrow.setAttribute("aria-hidden", "true");
-      dl.appendChild(arrow);
-      dl.href = g.fileUrl || "#";
-      var note = el("p", "cta-note", "Prototype: nothing was sent or saved. In AEM this button downloads the PDF the author picks from Assets.");
+      var resend = button("btn-outline", g.resendLabel, false);
+      var change = el("button", "link-btn", g.changeLabel);
+      change.type = "button";
+      var note = el("p", "cta-note", "Prototype: no email is sent. In AEM, sending the form triggers the email from your marketing platform, and this button sends it again.");
       note.hidden = true;
-      dl.addEventListener("click", function (e) {
-        track("download", { file: g.fileUrl || "not set" });
-        if (!g.fileUrl) { e.preventDefault(); note.hidden = false; }
+      resend.addEventListener("click", function () {
+        track("resend", {});
+        note.hidden = false;
       });
-      row.appendChild(dl);
+      change.addEventListener("click", function () {
+        state.lead = null;
+        render("gate");
+      });
+      row.appendChild(resend);
+      row.appendChild(change);
       row.appendChild(note);
       body.appendChild(row);
       return panel;
@@ -1033,7 +1057,7 @@ button { font: inherit; color: inherit; }
       });
       if (firstBad) { firstBad.focus(); return; }
       /* In AEM: post the fields to the lead system here, then unlock on success. */
-      state.lead = { first: state.draft.first.trim() };
+      state.lead = { first: state.draft.first.trim(), email: state.draft.email.trim() };
       track("unlock", { optIn: !!state.draft.optIn });
       render("gate");
     });
