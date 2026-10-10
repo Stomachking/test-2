@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outlook Takeaways Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Base reset the hosting page would normally provide */
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<style>
+/* Layout: the component sits straight on a white page, set in brown ink, with no panel behind it.
+   Left: masthead and a contents list whose headlines stay sealed until answered.
+   Right: one question as ruled rows; each takeaway arrives as a bordered sheet.
+   One deliberate light look: every colour is set here, so it reads the same on any host theme. */
+:root {
+  color-scheme: light;
+  /* Page */
+  --bg: #FFFFFF;
+  --ink: #3A2416;
+  --muted: #7A6351;
+  --line: #E2D8CA;
+  --surface: #FFFFFF;
+  --surface-2: #F0E8DC;
+  --accent: #8C4F18;
+  /* Stage */
+  --stage: #FFFFFF;
+  --stage-2: #54341F;
+  --stage-ink: #3A2416;
+  --stage-muted: #765F4D;
+  --stage-line: rgba(58, 36, 22, 0.18);
+  --stage-tint: rgba(58, 36, 22, 0.05);
+  --brass: #8C4F18;
+  --good: #1F6B45;
+  --bad: #A3352B;
+  /* Paper */
+  --paper: #FFFFFF;
+  --paper-ink: #3A2416;
+  --paper-muted: #765F4D;
+  --paper-line: #E2D8CA;
+  --paper-brass: #8C4F18;
+  --paper-bad: #A3352B;
+  /* Report cover */
+  --cover: #3A2416;
+  --cover-ink: #F6EEE2;
+  --cover-accent: #DDAA70;
+  --font-display: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-body: "Hanken Grotesk", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--font-body);
+}
+h1, h2, h3, p, ol { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.page {
+  max-width: 1180px;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 3vw, 32px);
+  padding-block: 20px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.proto-note {
+  align-self: flex-start;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.proto-note strong { color: var(--ink); font-weight: 600; }
+
+/* ---------- Stage ---------- */
+.tq {
+  position: relative;
+  color: var(--stage-ink);
+  padding-block: clamp(12px, 3vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+.tq :focus-visible { outline-color: var(--brass); }
+
+.tq-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "head main" "rail main";
+  gap: 44px clamp(32px, 6vw, 80px);
+  align-items: start;
+}
+.tq-head { grid-area: head; display: flex; flex-direction: column; gap: 18px; }
+.tq-main { grid-area: main; min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+.tq-rail { grid-area: rail; min-width: 0; }
+
+.eyebrow, .rail-title, .q-count, .recap-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.eyebrow { color: var(--brass); }
+.tq-head h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2.5rem, 4.6vw, 3.6rem);
+  line-height: 1;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.tq-head h1 em { display: block; font-style: italic; color: var(--brass); }
+.tq-intro { color: var(--stage-muted); max-width: 40ch; }
+
+/* ---------- Contents rail ---------- */
+.rail-title { color: var(--stage-muted); padding-bottom: 12px; }
+.tq-rail ol { list-style: none; padding: 0; border-top: 1px solid var(--stage-line); }
+.tq-rail li { border-bottom: 1px solid var(--stage-line); }
+.row {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 14px 8px 14px 4px;
+  cursor: pointer;
+  transition: background-color .2s;
+}
+.row:hover:not(:disabled) { background: var(--stage-tint); }
+.row:disabled { cursor: default; opacity: 1; color: var(--stage-ink); }
+.row-num {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--stage-muted);
+}
+.row-num.is-file { font-family: var(--font-body); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; }
+.row.is-done .row-num, .row.is-open .row-num { color: var(--brass); }
+.row-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.row-title {
+  font-family: var(--font-display);
+  font-size: 1.3125rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.row:disabled .row-title { color: var(--stage-muted); }
+.row-state { font-size: 0.8125rem; color: var(--stage-muted); }
+.row[aria-current="step"] .row-state { color: var(--brass); }
+.row.is-fresh .row-title { animation: unveil .8s cubic-bezier(.2, .7, .2, 1) both; }
+/* Sealed headline: bars standing in for text that has not been unlocked yet */
+.seal { display: flex; flex-direction: column; gap: 6px; padding-block: 5px 3px; }
+.seal i { display: block; height: 9px; border-radius: 2px; background: rgba(58, 36, 22, 0.13); }
+.row.is-open .seal i {
+  background: linear-gradient(90deg, rgba(58, 36, 22, 0.16) 0%, rgba(140, 79, 24, 0.5) 50%, rgba(58, 36, 22, 0.16) 100%);
+  background-size: 220% 100%;
+  animation: shimmer 2.8s linear infinite;
+}
+@keyframes shimmer { from { background-position: 110% 0; } to { background-position: -110% 0; } }
+@keyframes unveil { from { clip-path: inset(0 100% 0 0); opacity: .2; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+
+/* ---------- Question ---------- */
+.q-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.q-count { color: var(--stage-muted); white-space: nowrap; }
+.curve { flex: 0 1 260px; min-width: 0; height: auto; overflow: visible; }
+.curve-base { stroke: var(--stage-line); stroke-width: 1.5; }
+.curve-prog { stroke: var(--brass); stroke-width: 1.5; }
+.node { fill: var(--stage); stroke: var(--stage-muted); stroke-width: 1.5; }
+.node.is-done { fill: var(--brass); stroke: var(--brass); }
+.node.is-current { stroke: var(--stage-ink); stroke-width: 2; }
+.q-text {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.75rem, 3.2vw, 2.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.q-text:focus { outline: none; }
+
+.options { display: flex; flex-direction: column; border-top: 1px solid var(--stage-line); }
+.opt {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) 1.5rem;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--stage-line);
+  padding: 16px 10px 16px 6px;
+  cursor: pointer;
+  transition: background-color .2s, color .2s;
+}
+.opt:hover:not(:disabled) { background: var(--stage-tint); }
+.opt:disabled { cursor: default; opacity: 1; color: var(--stage-ink); }
+.opt-key {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.5rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--brass);
+}
+.opt-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.opt-text { font-size: 1.0625rem; font-weight: 500; }
+.opt-tag { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.opt-go { justify-self: end; color: var(--brass); opacity: 0; transform: translateX(-6px); transition: opacity .2s, transform .2s; }
+.opt:hover:not(:disabled) .opt-go, .opt:focus-visible .opt-go { opacity: 1; transform: none; }
+.opt.is-dim { color: var(--stage-muted); }
+.opt.is-dim .opt-key { color: var(--stage-muted); }
+.opt.is-dim .opt-text { font-weight: 400; }
+.opt.is-correct { background: rgba(31, 107, 69, 0.1); }
+.opt.is-correct .opt-key, .opt.is-correct .opt-tag, .opt.is-correct .opt-go { color: var(--good); }
+.opt.is-wrong { background: rgba(163, 53, 43, 0.08); }
+.opt.is-wrong .opt-key, .opt.is-wrong .opt-tag, .opt.is-wrong .opt-go { color: var(--bad); }
+.opt.is-correct .opt-go, .opt.is-wrong .opt-go { opacity: 1; transform: none; font-weight: 700; }
+
+/* ---------- Paper: everything unlocked is printed on it ---------- */
+.paper {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 3px;
+  padding: clamp(20px, 3vw, 32px);
+  box-shadow: 0 0 0 1px var(--paper-line), 0 24px 40px -28px rgba(58, 36, 22, 0.5);
+}
+.paper :focus-visible { outline-color: var(--paper-ink); }
+.paper-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper-brass);
+  font-variant-numeric: tabular-nums;
+}
+.paper h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.7rem, 3vw, 2.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.005em;
+  text-wrap: balance;
+}
+.paper h3:focus { outline: none; }
+.reveal { display: flex; flex-direction: column; gap: 12px; animation: sheet .55s cubic-bezier(.2, .7, .2, 1) both; }
+.reveal:focus { outline: none; }
+.reveal > * { position: relative; }
+.paper-numeral {
+  position: absolute !important;
+  right: 18px;
+  top: -6px;
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 11vw, 8rem);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--paper-brass);
+  opacity: 0.16;
+  pointer-events: none;
+}
+.reveal-verdict { font-weight: 700; }
+.reveal-text { max-width: 54ch; color: var(--paper-ink); }
+.reveal h3 { max-width: 16em; }
+@keyframes sheet { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 6px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 3px;
+  padding: 14px 22px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color .2s, color .2s;
+}
+.btn .arrow { transition: transform .2s; }
+.btn:hover .arrow { transform: translateX(4px); }
+.btn-ink { background: var(--paper-ink); color: var(--paper); }
+.btn-ink:hover { background: var(--stage-2); }
+.btn-line { background: transparent; color: var(--stage-ink); border-color: var(--stage-line); }
+.btn-line:hover { background: var(--stage-tint); }
+.cta-note { font-size: 0.8125rem; color: var(--paper-muted); flex-basis: 100%; }
+
+/* ---------- Result ---------- */
+.score { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px; }
+.score-num {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(4.5rem, 9vw, 6.5rem);
+  line-height: 0.85;
+  color: var(--brass);
+  font-variant-numeric: lining-nums;
+}
+.score-num i { font-style: italic; color: var(--stage-muted); padding-inline: 0.04em; }
+.score-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 14rem; }
+.result-lede { color: var(--stage-muted); }
+
+.gate { display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: clamp(20px, 3vw, 32px); align-items: start; }
+.gate-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+/* The executive summary itself, drawn as a report cover */
+.cover {
+  aspect-ratio: 3 / 4;
+  max-width: 100%;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0 5px, transparent 5px), var(--cover);
+  color: var(--cover-ink);
+  border-radius: 2px 5px 5px 2px;
+  padding: 14px 12px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 14px 24px -14px rgba(58, 36, 22, 0.7);
+  transform: rotate(-3deg);
+  transform-origin: 30% 70%;
+}
+.cover.is-open { animation: settle .6s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes settle { from { transform: rotate(-3deg); } to { transform: rotate(0deg) translateY(-2px); } }
+.cover-eyebrow { font-size: 0.5rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--cover-accent); }
+.cover-title { font-family: var(--font-display); font-size: 1.375rem; font-weight: 500; line-height: 1; }
+.cover-rule { width: 28px; height: 1px; background: var(--cover-accent); }
+.cover-tag {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid rgba(246, 238, 226, 0.3);
+  border-radius: 2px;
+  padding: 3px 6px;
+  color: var(--cover-ink);
+}
+.cover.is-open .cover-tag { color: var(--cover); background: var(--cover-accent); border-color: var(--cover-accent); }
+
+.gate-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 14px; margin-top: 8px; }
+.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.field.is-wide, .gate-form > .check, .gate-form > .gate-privacy, .gate-form > .actions { grid-column: 1 / -1; }
+.field label { font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--paper-muted); }
+.field input {
+  font: inherit;
+  color: var(--paper-ink);
+  background: rgba(58, 36, 22, 0.05);
+  border: 0;
+  border-bottom: 1.5px solid var(--paper-ink);
+  border-radius: 3px 3px 0 0;
+  padding: 10px 10px 9px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.field input:focus-visible { outline-offset: 1px; }
+.field input[aria-invalid="true"] { border-bottom-color: var(--paper-bad); background: rgba(163, 53, 43, 0.08); }
+.field-error { font-size: 0.8125rem; font-weight: 600; color: var(--paper-bad); }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.9375rem; cursor: pointer; }
+.check input { width: 18px; height: 18px; margin: 3px 0 0; flex: none; accent-color: var(--paper-ink); }
+.gate-privacy { font-size: 0.8125rem; color: var(--paper-muted); }
+.gate-form > .actions { margin-top: 0; }
+
+/* Result screen: the two-column quiz gives way to one full-width page.
+   Score on top, the takeaways as a row of ruled columns, then the summary gate. */
+.tq.is-result .tq-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "main"; }
+.tq.is-result .tq-main { gap: 30px; }
+.result-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px 48px; }
+.result-head .score { flex: 1 1 24rem; min-width: 0; }
+.result-head .q-count { white-space: normal; }
+.result-head .curve { flex: 0 1 300px; }
+.recap-title { color: var(--stage-muted); margin-top: 6px; margin-bottom: -14px; }
+.cards {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
+  column-gap: 28px;
+  row-gap: 0;
+}
+.tcard {
+  grid-row: span 4;
+  display: grid;
+  grid-template-rows: subgrid;
+  row-gap: 10px;
+  min-width: 0;
+  border-top: 1px solid var(--stage-ink);
+  padding-block: 16px 26px;
+}
+.tcard-num { font-family: var(--font-display); font-size: 2.75rem; font-weight: 500; line-height: 1; color: var(--brass); }
+.tcard h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.4375rem; line-height: 1.1; text-wrap: balance; }
+.tcard p { color: var(--stage-muted); font-size: 0.9375rem; }
+.tcard-foot {
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-top: 6px;
+  font-size: 0.8125rem;
+}
+.tcard-status { font-weight: 600; }
+.tcard-status.is-right { color: var(--good); }
+.tcard-status.is-missed { color: var(--bad); }
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--stage-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link-btn:hover { color: var(--brass); }
+.back-link { align-self: flex-start; font-size: 0.875rem; margin-bottom: -6px; }
+.btn-outline { background: transparent; color: var(--paper-ink); border-color: var(--paper-ink); }
+.btn-outline:hover { background: var(--stage-tint); }
+.row-num, .tcard-num, .paper-numeral { font-variant-numeric: lining-nums; }
+
+.tq.is-result .gate { padding: clamp(20px, 3.4vw, 40px); }
+.gate-intro { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.gate-body.has-form {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+  gap: 12px clamp(24px, 4vw, 56px);
+  align-items: start;
+}
+.gate-body.has-form .gate-form { margin-top: 0; }
+
+@media (max-width: 1040px) {
+  .cards { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  .cards.is-five { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .cards.is-five .tcard { grid-column: span 2; }
+  .cards.is-five .tcard:nth-child(n+4) { grid-column: span 3; }
+  .gate-body.has-form { grid-template-columns: minmax(0, 1fr); }
+  .gate-body.has-form .gate-form { margin-top: 8px; }
+}
+@media (max-width: 640px) {
+  .cards, .cards.is-five { grid-template-columns: minmax(0, 1fr); }
+  .cards .tcard, .cards.is-five .tcard:nth-child(n) {
+    grid-column: auto;
+    grid-row: auto;
+    grid-template-rows: none;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    gap: 6px 8px;
+    padding-block: 14px 18px;
+  }
+  .tcard-num { grid-row: 1 / span 3; font-size: 2rem; }
+  .tcard > :not(.tcard-num) { grid-column: 2; }
+}
+
+.tq-disclaimer {
+  font-size: 0.8125rem;
+  color: var(--stage-muted);
+  border-top: 1px solid var(--stage-line);
+  padding-top: 18px;
+  max-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .cover.is-open, .row.is-fresh .row-title, .row.is-open .seal i { animation: none; }
+  .cover.is-open { transform: none; }
+  .opt, .opt-go, .btn, .btn .arrow, .row { transition: none; }
+}
+
+@media (max-width: 820px) {
+  .tq-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; grid-template-areas: "head" "main" "rail"; gap: 32px; }
+  .tq { gap: 32px; }
+}
+@media (max-width: 520px) {
+  .gate { grid-template-columns: minmax(0, 1fr); }
+  .cover { width: 96px; }
+  .gate-form { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="proto-note"><strong>Prototype.</strong> Draft copy written from five headlines. Replace with text from the outlook before launch.</p>
+
+  <section class="tq" aria-labelledby="tq-title">
+    <div class="tq-grid">
+      <header class="tq-head">
+        <p class="eyebrow" id="tq-eyebrow"></p>
+        <h1 id="tq-title"></h1>
+        <p class="tq-intro" id="tq-intro"></p>
+      </header>
+      <div class="tq-main" id="tq-card"></div>
+      <nav class="tq-rail" aria-label="Takeaways">
+        <p class="rail-title">Contents</p>
+        <ol id="tq-list"></ol>
+      </nav>
+    </div>
+    <p class="tq-disclaimer" id="tq-disclaimer"></p>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  /* Authored content. In AEM this object is the component's exported model. */
+  var CONFIG = {
+    eyebrow: "Market outlook",
+    title: "Five takeaways from our outlook.",
+    titleEmphasis: "Guess before you read.",
+    intro: "Pick an answer to each question. Your choice unlocks the takeaway behind it. Answer all five to unlock the executive summary.",
+    questions: [
+      {
+        /* The three forces below are illustrative. Replace with the three named in the outlook. */
+        question: "Which of these forces is reshaping the investment landscape?",
+        options: [
+          "Heavy spending on artificial intelligence",
+          "Shifts in government spending and trade policy",
+          "A new path for interest rates",
+          "All three, at the same time"
+        ],
+        correct: 3,
+        takeaway: "Three forces investors shouldn’t miss",
+        explanation: "The outlook points to three forces acting together, not one. A portfolio built around a single theme risks missing the other two."
+      },
+      {
+        question: "Our growth outlook is the strongest it has been in how long?",
+        options: ["5 years", "10 years", "15 years", "25 years"],
+        correct: 2,
+        takeaway: "The strongest growth outlook in 15 years",
+        explanation: "Our forecasts point to the strongest growth outlook in 15 years. That changes the starting point for investors across markets."
+      },
+      {
+        question: "Which pairing does the outlook make a new case for?",
+        options: ["Stocks and bonds", "Cash and gold", "Property and commodities", "Stocks on their own"],
+        correct: 0,
+        takeaway: "A historic first, and a new case for stocks and bonds",
+        explanation: "Markets have reached a milestone not seen before. With it comes a fresh argument for holding stocks and bonds side by side."
+      },
+      {
+        question: "What can fixed income offer as the next cycle takes shape?",
+        options: [
+          "Returns guaranteed to beat stocks",
+          "Income, and a possible cushion if growth slows",
+          "Nothing once interest rates fall",
+          "A place to park cash for a few weeks"
+        ],
+        correct: 1,
+        takeaway: "Why fixed income may matter in the next cycle",
+        explanation: "Bonds may matter more in the next cycle than they did in the last. They can provide steady income and may help balance a portfolio when stocks are under pressure."
+      },
+      {
+        question: "What is the strongest reason to diversify?",
+        options: [
+          "It guarantees a profit every year",
+          "It removes all risk",
+          "It means no single market decides your result",
+          "It beats the market in the short run"
+        ],
+        correct: 2,
+        takeaway: "Reasons to diversify",
+        explanation: "Spreading investments across assets, regions and sectors means no single outcome decides your result. It doesn’t remove risk, but it can make the ride smoother."
+      }
+    ],
+    results: {
+      high: { title: "A clean sweep.", text: "You read the market the way we do." },
+      mid: { title: "Close.", text: "The takeaways below fill in the rest." },
+      low: { title: "That is what the outlook is for.", text: "All five takeaways are set out below." }
+    },
+    gate: {
+      heading: "Get the executive summary",
+      intro: "You have unlocked all five takeaways. Add your details to download the summary as a PDF.",
+      submitLabel: "Unlock the summary",
+      optIn: "Email me future market insights. I can unsubscribe at any time.",
+      privacy: "We use your details to provide this summary, as set out in our privacy notice.",
+      thanks: "Your executive summary is ready.",
+      downloadLabel: "Download the PDF",
+      fileUrl: ""
+    },
+    disclaimer: "This quiz is for general information only and is not investment advice. Diversification does not guarantee a profit or protect against loss."
+  };
+
+  var LETTERS = "ABCDEFG";
+  var NUMERAL = ["1", "2", "3", "4", "5", "6", "7"];
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var total = CONFIG.questions.length;
+  var state = { current: 0, view: "question", lead: null, draft: {}, fresh: null, picks: CONFIG.questions.map(function () { return null; }) };
+
+  var card = document.getElementById("tq-card");
+  var list = document.getElementById("tq-list");
+  var root = document.querySelector(".tq");
+  var headEl = document.querySelector(".tq-head");
+  var railEl = document.querySelector(".tq-rail");
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function svgEl(tag, attrs) {
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function button(cls, label, arrow) {
+    var b = el("button", "btn " + cls);
+    b.type = "button";
+    b.appendChild(el("span", null, label));
+    if (arrow) { var a = el("span", "arrow", "→"); a.setAttribute("aria-hidden", "true"); b.appendChild(a); }
+    return b;
+  }
+  function firstOpen() { var i = state.picks.indexOf(null); return i === -1 ? total : i; }
+  function score() {
+    return state.picks.filter(function (p, i) { return p === CONFIG.questions[i].correct; }).length;
+  }
+  function track(name, detail) {
+    window.adobeDataLayer = window.adobeDataLayer || [];
+    window.adobeDataLayer.push({ event: "takeawayQuiz:" + name, takeawayQuiz: detail });
+  }
+  function go(index, view, focus) {
+    var layoutChanged = (view === "result") !== (state.view === "result");
+    state.current = index;
+    state.view = view;
+    if (view === "result") state.seenResult = true;
+    render(focus);
+    /* The result screen swaps the layout, so bring the top of the component back into view. */
+    if (layoutChanged) root.scrollIntoView({ block: "start" });
+  }
+
+  /* Progress drawn as points on a rising line: one point per question. */
+  function drawCurve(host) {
+    var d = "M6 48 C 70 47, 120 42, 165 30 S 262 9, 314 8";
+    var svg = svgEl("svg", { viewBox: "0 0 320 56", "class": "curve", "aria-hidden": "true", focusable: "false" });
+    var base = svgEl("path", { d: d, "class": "curve-base", fill: "none" });
+    var prog = svgEl("path", { d: d, "class": "curve-prog", fill: "none", pathLength: "100" });
+    svg.appendChild(base);
+    svg.appendChild(prog);
+    host.appendChild(svg);
+    var open = firstOpen();
+    var reached = open - 1;
+    if (reached > 0) prog.setAttribute("stroke-dasharray", (reached / (total - 1)) * 100 + " 100");
+    else prog.setAttribute("visibility", "hidden");
+    var len = 0;
+    try { len = base.getTotalLength(); } catch (e) { len = 0; }
+    for (var k = 0; k < total; k++) {
+      var t = k / (total - 1);
+      var pt = len ? base.getPointAtLength(len * t) : { x: 6 + 308 * t, y: 48 - 40 * t };
+      var current = state.view === "question" && state.current === k;
+      svg.appendChild(svgEl("circle", {
+        cx: pt.x, cy: pt.y, r: current ? 6 : 4.5,
+        "class": "node" + (state.picks[k] !== null ? " is-done" : "") + (current ? " is-current" : "")
+      }));
+    }
+  }
+
+  function renderRail() {
+    list.textContent = "";
+    var open = firstOpen();
+    CONFIG.questions.forEach(function (q, i) {
+      var pick = state.picks[i];
+      var done = pick !== null;
+      var li = el("li");
+      var b = el("button", "row" + (done ? " is-done" : i === open ? " is-open" : "") + (state.fresh === i ? " is-fresh" : ""));
+      b.type = "button";
+      b.disabled = i > open;
+      if (state.view === "question" && state.current === i) b.setAttribute("aria-current", "step");
+      var num = el("span", "row-num", NUMERAL[i]);
+      num.setAttribute("aria-hidden", "true");
+      b.appendChild(num);
+      var body = el("span", "row-body");
+      if (done) {
+        body.appendChild(el("span", "row-title", q.takeaway));
+      } else {
+        var seal = el("span", "seal");
+        seal.setAttribute("aria-hidden", "true");
+        var a = el("i"); a.style.width = (62 + (i * 13) % 30) + "%";
+        var c = el("i"); c.style.width = (28 + (i * 17) % 26) + "%";
+        seal.appendChild(a);
+        seal.appendChild(c);
+        body.appendChild(seal);
+        body.appendChild(el("span", "vh", "Takeaway " + (i + 1) + ", locked"));
+      }
+      body.appendChild(el("span", "row-state",
+        done ? (pick === q.correct ? "Unlocked. You got it right." : "Unlocked. You missed this one.")
+             : i === open ? "Answer question " + (i + 1) + " to unlock" : "Locked"));
+      b.appendChild(body);
+      b.addEventListener("click", function () { go(i, "question", "question"); });
+      li.appendChild(b);
+      list.appendChild(li);
+    });
+
+    /* The reward is listed from the start, locked until all questions are answered. */
+    var allDone = open === total;
+    var li = el("li");
+    var r = el("button", "row" + (state.lead ? " is-done" : allDone ? " is-open" : ""));
+    r.type = "button";
+    r.disabled = !allDone;
+    if (state.view === "result") r.setAttribute("aria-current", "step");
+    var tag = el("span", "row-num is-file", "PDF");
+    tag.setAttribute("aria-hidden", "true");
+    r.appendChild(tag);
+    var rb = el("span", "row-body");
+    rb.appendChild(el("span", "row-title", "Executive summary"));
+    rb.appendChild(el("span", "row-state",
+      !allDone ? "Answer all " + total + " to unlock"
+               : state.lead ? "Unlocked. Ready to download."
+               : "You got " + score() + " of " + total + ". Add your details to download."));
+    r.appendChild(rb);
+    r.addEventListener("click", function () { go(state.current, "result", "question"); });
+    li.appendChild(r);
+    list.appendChild(li);
+    state.fresh = null;
+  }
+
+  function renderQuestion(focus) {
+    var i = state.current;
+    var q = CONFIG.questions[i];
+    var pick = state.picks[i];
+    var done = pick !== null;
+    card.textContent = "";
+
+    /* Reviewing after the result has been seen: always offer a way straight back. */
+    if (state.seenResult && firstOpen() === total) {
+      var back = el("button", "link-btn back-link", "← Back to your result");
+      back.type = "button";
+      back.addEventListener("click", function () { go(i, "result", "question"); });
+      card.appendChild(back);
+    }
+
+    var top = el("div", "q-top");
+    top.appendChild(el("p", "q-count", "Question " + (i + 1) + " of " + total));
+    card.appendChild(top);
+    drawCurve(top);
+
+    var h = el("h2", "q-text", q.question);
+    h.id = "tq-question";
+    h.tabIndex = -1;
+    card.appendChild(h);
+
+    var group = el("div", "options");
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-labelledby", "tq-question");
+    q.options.forEach(function (text, o) {
+      var b = el("button", "opt");
+      b.type = "button";
+      b.id = "tq-opt-" + i + "-" + o;
+      b.appendChild(el("span", "opt-key", LETTERS[o]));
+      var body = el("span", "opt-body");
+      body.appendChild(el("span", "opt-text", text));
+      var mark = el("span", "opt-go", "→");
+      mark.setAttribute("aria-hidden", "true");
+      if (done) {
+        b.disabled = true;
+        if (o === q.correct) {
+          b.classList.add("is-correct");
+          mark.textContent = "✓";
+          body.appendChild(el("span", "opt-tag", pick === o ? "Your pick · correct" : "Correct answer"));
+        } else if (o === pick) {
+          b.classList.add("is-wrong");
+          mark.textContent = "✕";
+          body.appendChild(el("span", "opt-tag", "Your pick"));
+        } else {
+          b.classList.add("is-dim");
+          mark.textContent = "";
+        }
+      } else {
+        b.addEventListener("click", function () {
+          state.picks[i] = o;
+          state.fresh = i;
+          track("answer", { question: i + 1, option: LETTERS[o], correct: o === q.correct });
+          if (firstOpen() === total) track("complete", { score: score(), total: total });
+          render("reveal");
+        });
+      }
+      b.appendChild(body);
+      b.appendChild(mark);
+      group.appendChild(b);
+    });
+    card.appendChild(group);
+
+    var reveal;
+    if (done) {
+      reveal = el("div", "paper reveal");
+      reveal.tabIndex = -1;
+      reveal.setAttribute("role", "status");
+      var numeral = el("span", "paper-numeral", NUMERAL[i]);
+      numeral.setAttribute("aria-hidden", "true");
+      reveal.appendChild(numeral);
+      reveal.appendChild(el("p", "reveal-verdict",
+        pick === q.correct ? "Correct." : "Not quite. The answer is " + LETTERS[q.correct] + "."));
+      reveal.appendChild(el("p", "paper-label", "Takeaway " + (i + 1) + " of " + total));
+      reveal.appendChild(el("h3", null, q.takeaway));
+      reveal.appendChild(el("p", "reveal-text", q.explanation));
+      var actions = el("div", "actions");
+      var allDone = firstOpen() === total;
+      var last = i === total - 1;
+      if (allDone && state.seenResult) {
+        var toResult = button("btn-ink", "Back to your result", true);
+        toResult.addEventListener("click", function () { go(i, "result", "question"); });
+        actions.appendChild(toResult);
+        if (!last) {
+          var nextQ = button("btn-outline", "Next question", false);
+          nextQ.addEventListener("click", function () { go(i + 1, "question", "question"); });
+          actions.appendChild(nextQ);
+        }
+      } else {
+        var next = button("btn-ink", last ? (allDone ? "See your result" : "Back to open questions") : "Next question", true);
+        next.addEventListener("click", function () {
+          if (!last) go(i + 1, "question", "question");
+          else if (allDone) go(i, "result", "question");
+          else go(firstOpen(), "question", "question");
+        });
+        actions.appendChild(next);
+      }
+      reveal.appendChild(actions);
+      card.appendChild(reveal);
+    }
+
+    if (focus === "reveal" && reveal) {
+      reveal.focus({ preventScroll: true });
+      reveal.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } else if (focus === "question") {
+      h.focus({ preventScroll: true });
+    }
+  }
+
+  function renderResult(focus) {
+    var s = score();
+    var msg = s === total ? CONFIG.results.high : s >= Math.ceil(total / 2) ? CONFIG.results.mid : CONFIG.results.low;
+    card.textContent = "";
+
+    var head = el("div", "result-head");
+    var block = el("div", "score");
+    var big = el("p", "score-num");
+    big.setAttribute("aria-hidden", "true");
+    big.appendChild(document.createTextNode(String(s)));
+    big.appendChild(el("i", null, "/"));
+    big.appendChild(document.createTextNode(String(total)));
+    block.appendChild(big);
+    var words = el("div", "score-text");
+    words.appendChild(el("p", "q-count", CONFIG.eyebrow + " · Your result"));
+    var h = el("h2", "q-text");
+    h.tabIndex = -1;
+    h.appendChild(el("span", "vh", "You got " + s + " of " + total + ". "));
+    h.appendChild(document.createTextNode(msg.title));
+    words.appendChild(h);
+    words.appendChild(el("p", "result-lede", msg.text));
+    block.appendChild(words);
+    head.appendChild(block);
+    card.appendChild(head);
+    drawCurve(head);
+
+    card.appendChild(el("p", "recap-title", "The " + total + " takeaways you unlocked"));
+
+    var cards = el("ol", "cards" + (total === 5 ? " is-five" : ""));
+    cards.style.setProperty("--n", total);
+    CONFIG.questions.forEach(function (q, i) {
+      var right = state.picks[i] === q.correct;
+      var li = el("li", "tcard");
+      var num = el("span", "tcard-num", NUMERAL[i]);
+      num.setAttribute("aria-hidden", "true");
+      li.appendChild(num);
+      li.appendChild(el("h3", null, q.takeaway));
+      li.appendChild(el("p", null, q.explanation));
+      var foot = el("div", "tcard-foot");
+      foot.appendChild(el("span", "tcard-status " + (right ? "is-right" : "is-missed"),
+        right ? "✓ Got it right" : "✕ Missed"));
+      var review = el("button", "link-btn", "Review");
+      review.type = "button";
+      review.setAttribute("aria-label", "Review question " + (i + 1));
+      review.addEventListener("click", function () { go(i, "question", "question"); });
+      foot.appendChild(review);
+      li.appendChild(foot);
+      cards.appendChild(li);
+    });
+    card.appendChild(cards);
+
+    card.appendChild(renderGate());
+
+    var actions = el("div", "actions");
+    var again = button("btn-line", "Start again", false);
+    again.addEventListener("click", function () {
+      state.picks = CONFIG.questions.map(function () { return null; });
+      state.seenResult = false;
+      go(0, "question", "question");
+    });
+    actions.appendChild(again);
+    card.appendChild(actions);
+
+    var gateTitle = document.getElementById("tq-gate-title");
+    if (focus === "gate" && gateTitle) gateTitle.focus({ preventScroll: true });
+    else if (focus) h.focus({ preventScroll: true });
+  }
+
+  var EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var FIELDS = [
+    { key: "first", id: "tq-first", label: "First name", type: "text", auto: "given-name", empty: "Enter your first name." },
+    { key: "last", id: "tq-last", label: "Last name", type: "text", auto: "family-name", empty: "Enter your last name." },
+    { key: "email", id: "tq-email", label: "Work email", type: "email", auto: "email", wide: true,
+      empty: "Enter your work email.", invalid: "Enter an email address in the format name@company.com." },
+    { key: "company", id: "tq-company", label: "Company", type: "text", auto: "organization", wide: true, empty: "Enter your company name." }
+  ];
+
+  function fieldError(f) {
+    var v = (state.draft[f.key] || "").trim();
+    if (!v) return f.empty;
+    if (f.type === "email" && !EMAIL.test(v)) return f.invalid;
+    return "";
+  }
+
+  function renderCover(open) {
+    var cover = el("div", "cover" + (open ? " is-open" : ""));
+    cover.setAttribute("aria-hidden", "true");
+    cover.appendChild(el("span", "cover-eyebrow", CONFIG.eyebrow));
+    cover.appendChild(el("span", "cover-title", "Executive Summary"));
+    cover.appendChild(el("span", "cover-rule"));
+    cover.appendChild(el("span", "cover-tag", open ? "PDF · Ready" : "PDF · Locked"));
+    return cover;
+  }
+
+  function renderGate() {
+    var g = CONFIG.gate;
+    var panel = el("div", "paper gate");
+    panel.appendChild(renderCover(!!state.lead));
+    var body = el("div", "gate-body");
+    panel.appendChild(body);
+
+    if (state.lead) {
+      body.appendChild(el("p", "paper-label", "Unlocked"));
+      var done = el("h3", null, "Thanks, " + state.lead.first + ". " + g.thanks);
+      done.id = "tq-gate-title";
+      done.tabIndex = -1;
+      body.appendChild(done);
+      var row = el("div", "actions");
+      var dl = el("a", "btn btn-ink");
+      dl.appendChild(el("span", null, g.downloadLabel));
+      var arrow = el("span", "arrow", "↓");
+      arrow.setAttribute("aria-hidden", "true");
+      dl.appendChild(arrow);
+      dl.href = g.fileUrl || "#";
+      var note = el("p", "cta-note", "Prototype: nothing was sent or saved. In AEM this button downloads the PDF the author picks from Assets.");
+      note.hidden = true;
+      dl.addEventListener("click", function (e) {
+        track("download", { file: g.fileUrl || "not set" });
+        if (!g.fileUrl) { e.preventDefault(); note.hidden = false; }
+      });
+      row.appendChild(dl);
+      row.appendChild(note);
+      body.appendChild(row);
+      return panel;
+    }
+
+    body.classList.add("has-form");
+    var intro = el("div", "gate-intro");
+    intro.appendChild(el("p", "paper-label", "Unlocked by your " + total + " answers"));
+    var title = el("h3", null, g.heading);
+    title.id = "tq-gate-title";
+    title.tabIndex = -1;
+    intro.appendChild(title);
+    intro.appendChild(el("p", "reveal-text", g.intro));
+    body.appendChild(intro);
+
+    var form = el("form", "gate-form");
+    form.noValidate = true;
+    form.setAttribute("aria-labelledby", "tq-gate-title");
+    var controls = FIELDS.map(function (f) {
+      var wrap = el("div", "field" + (f.wide ? " is-wide" : ""));
+      var label = el("label", null, f.label);
+      label.htmlFor = f.id;
+      var input = el("input");
+      input.id = f.id;
+      input.name = f.key;
+      input.type = f.type;
+      input.autocomplete = f.auto;
+      input.required = true;
+      input.value = state.draft[f.key] || "";
+      var err = el("p", "field-error");
+      err.id = f.id + "-error";
+      err.hidden = true;
+      input.setAttribute("aria-describedby", err.id);
+      input.addEventListener("input", function () {
+        state.draft[f.key] = input.value;
+        if (!err.hidden && !fieldError(f)) { err.hidden = true; input.removeAttribute("aria-invalid"); }
+      });
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      wrap.appendChild(err);
+      form.appendChild(wrap);
+      return { f: f, input: input, err: err };
+    });
+
+    var check = el("label", "check");
+    var box = el("input");
+    box.type = "checkbox";
+    box.id = "tq-optin";
+    box.name = "optIn";
+    box.checked = !!state.draft.optIn;
+    box.addEventListener("change", function () { state.draft.optIn = box.checked; });
+    check.appendChild(box);
+    check.appendChild(el("span", null, g.optIn));
+    form.appendChild(check);
+    form.appendChild(el("p", "gate-privacy", g.privacy));
+
+    var row = el("div", "actions");
+    var submit = button("btn-ink", g.submitLabel, true);
+    submit.type = "submit";
+    row.appendChild(submit);
+    form.appendChild(row);
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var firstBad = null;
+      controls.forEach(function (c) {
+        var msg = fieldError(c.f);
+        c.err.textContent = msg;
+        c.err.hidden = !msg;
+        if (msg) { c.input.setAttribute("aria-invalid", "true"); firstBad = firstBad || c.input; }
+        else c.input.removeAttribute("aria-invalid");
+      });
+      if (firstBad) { firstBad.focus(); return; }
+      /* In AEM: post the fields to the lead system here, then unlock on success. */
+      state.lead = { first: state.draft.first.trim() };
+      track("unlock", { optIn: !!state.draft.optIn });
+      render("gate");
+    });
+    body.appendChild(form);
+    return panel;
+  }
+
+  function render(focus) {
+    var isResult = state.view === "result";
+    root.classList.toggle("is-result", isResult);
+    headEl.hidden = isResult;
+    railEl.hidden = isResult;
+    renderRail();
+    if (state.view === "result") renderResult(focus);
+    else renderQuestion(focus);
+  }
+
+  document.getElementById("tq-eyebrow").textContent = CONFIG.eyebrow;
+  var titleEl = document.getElementById("tq-title");
+  titleEl.textContent = CONFIG.title + " ";
+  titleEl.appendChild(el("em", null, CONFIG.titleEmphasis));
+  document.getElementById("tq-intro").textContent = CONFIG.intro;
+  document.getElementById("tq-disclaimer").textContent = CONFIG.disclaimer;
+  render();
+})();
+</script>
+</body>
+</html>
